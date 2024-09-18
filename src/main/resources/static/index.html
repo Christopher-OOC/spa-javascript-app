@@ -79,8 +79,68 @@
 
         function postAuthorize(state, authCode) {
 
-            alert('State = ' + state + ', authCode = ' + authCode);
+            var originalStateValue = document.getElementById('stateValue').textContent;
+
+            if (state === originalStateValue) {
+
+                requestTokens(authCode);
+
+            }
+            else {
+                alert('Invalid state value received');
+            }
         }
+
+        function requestTokens(authCode) {
+
+            var codeVerifier = document.getElementById('codeVerifierValue').textContent;
+            var data = {
+            'grant_type': 'authorization_code',
+            'client_id': 'photo-app-PKCE-client',
+            'code': authCode,
+            'code_verifier': codeVerifier,
+            'redirect_uri': 'http://localhost:8181/authCodeReader.html'
+            };
+
+            $.ajax({
+
+                beforeSend: function (request) {
+
+                    request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded; charset=UFT-8');
+                },
+                type: 'POST',
+                url: 'http://localhost:8080/realms/auth-testing/protocol/openid-connect/token',
+                data: data,
+                success: postRequestAccessToken,
+                dataType: 'json'
+            });
+        }
+
+        function postRequestAccessToken(data, status, jqXHR) {
+                document.getElementById('accessToken').textContent = data['access_token'];
+            }
+
+        function getInfoFromResourceServer() {
+
+            var accessToken = document.getElementById('accessToken').textContent;
+
+            $.ajax({
+
+                beforeSend: function (request) {
+                    request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded; charset=UFT-8');
+                    request.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                },
+                type: 'GET',
+                'url': 'http://localhost:8082/users/status/check',
+                success: postInfoFromAccessToken,
+                dataType: 'text'
+            });
+        }
+
+        function postInfoFromAccessToken(data, status, jqXHR) {
+            alert(data);
+        }
+
 
     </script>
 </head>
@@ -97,5 +157,10 @@
     <div><input type="button" value="Generated code challenge value" onclick="display();"></div>
     <br>
     <div><input type="button" value="Get Auth Code" onclick="getAuthCode();"></div>
+
+    <p>Access token: <span id="accessToken"></span></p>
+    <br>
+    <div><input type="button" value="Load" onclick="getInfoFromResourceServer();"></div>
+
 </body>
 </html>
